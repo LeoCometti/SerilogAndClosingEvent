@@ -1,5 +1,6 @@
 ﻿using Serilog;
 using System;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -9,10 +10,16 @@ namespace SerilogAndClosingEvent
     {
         private static bool exitSystem = false;
 
-        private static Random rnd = new Random();   
+        private static Random rnd = new Random();
 
         static void Main(string[] args)
         {
+            RecordApplication.Starting(
+                GetBaseDirectory(),
+                GetAssemblyName(),
+                GetAssemblyVersion(),
+                IsRunningAsService());
+
             SetConsoleCtrlHandler(new EventHandler(Handler), true);
 
             AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
@@ -79,6 +86,20 @@ namespace SerilogAndClosingEvent
         private static void CurrentDomain_ProcessExit(object sender, EventArgs e)
         {
             Log.Information("Cleaning up Software!");
+
+            RecordApplication.Closing(
+                GetBaseDirectory(),
+                GetAssemblyName(),
+                GetAssemblyVersion(),
+                IsRunningAsService());
         }
+
+        private static string GetBaseDirectory() => AppDomain.CurrentDomain.BaseDirectory;
+
+        private static string GetAssemblyName() => Assembly.GetExecutingAssembly().GetName().Name;
+
+        private static string GetAssemblyVersion() => Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+        private static bool IsRunningAsService() => !Environment.UserInteractive;
     }
 }
